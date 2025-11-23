@@ -24,24 +24,25 @@ public sealed class DefaultThemeMonitor(
 		if (string.IsNullOrEmpty(storedMode)) {
 			storedMode = ThemeModeNames.Auto;
 		}
-
-		// Restore persisted preferences for Theme
-		var storedScheme = this.GetStoredScheme();
-		if (string.IsNullOrEmpty(storedScheme)) {
-			storedScheme = ThemeNames.Default;
-		}
-
 		// Apply restored preferences
 		if (Enum.TryParse<ThemeMode>(storedMode, true, out var mode)) {
 			themeManager.SetMode(mode);
 		}
 
-		if (Enum.TryParse<ThemeName>(storedScheme, true, out var theme)) {
-			themeManager.SetTheme(theme);
+		// Restore persisted preferences for Theme
+		var storedSchemeId = this.GetStoredScheme();
+		if (string.IsNullOrEmpty(storedSchemeId)) {
+			storedSchemeId = ColorSchemes.DefaultId;
 		}
+		var scheme = ColorSchemes.GetOrDefault(storedSchemeId);
+		// we don't call themeManager as our loader
+		// script should have already applied it.
+		// so we just update our internal state
+		themeState.SetTheme(scheme.Id);
+		//themeManager.SetScheme(scheme);
 
 		// Start monitoring system changes
-		this.MonitorSystemThemeChanges();
+		this.MonitorSystemModeChanges();
 
 		return ValueTask.CompletedTask;
 	}
@@ -54,10 +55,16 @@ public sealed class DefaultThemeMonitor(
 		}
 	}
 
-	private void MonitorSystemThemeChanges() {
-		var themeMonitor = new ThemeModeMonitorRef((isDarkMode, storedMode) => {
+	private string GetStoredMode() =>
+		(js.Invoke<string?>("localStorage.getItem", StorageKeys.ModeKey) ?? "").ToLowerInvariant();
+
+	private string GetStoredScheme() =>
+		(js.Invoke<string?>("localStorage.getItem", StorageKeys.SchemeKey) ?? "").ToLowerInvariant();
+
+	private void MonitorSystemModeChanges() {
+		var themeMonitor = new ModeMonitorRef((isDarkMode, storedMode) => {
 			if (storedMode == ThemeModeNames.Auto) {
-				js.SetElementAttribute("html", "data-bs-theme", isDarkMode ? "" : "");
+				js.SetElementAttribute("html", "data-bs-theme", isDarkMode ? ThemeModeNames.Dark : ThemeModeNames.Light);
 			}
 			return Task.CompletedTask;
 		});
@@ -65,109 +72,20 @@ public sealed class DefaultThemeMonitor(
 		var themeMonitorRef = DotNetObjectReference.Create(themeMonitor);
 		js.MonitorSystemThemeMode(themeMonitorRef);
 	}
-
-	private string GetStoredMode() =>
-		(js.Invoke<string?>("localStorage.getItem", StorageKeys.ModeKey) ?? "").ToLowerInvariant();
-
-	private string GetStoredScheme() =>
-		(js.Invoke<string?>("localStorage.getItem", StorageKeys.ThemeKey) ?? "").ToLowerInvariant();
-
-	private record ThemeModeMonitorRef : ISystemThemeChangedRef {
-		[DynamicDependency(nameof(ThemeChanged))]
-		public ThemeModeMonitorRef(Func<bool, string, Task>? onThemeChanged) {
+	private record ModeMonitorRef : IThemeModeChangedRef {
+		[DynamicDependency(nameof(ModeChanged))]
+		public ModeMonitorRef(Func<bool, string, Task>? onThemeChanged) {
 			this.OnThemeModeChanged = onThemeChanged;
 		}
 
 		public Func<bool, string, Task>? OnThemeModeChanged { get; }
 
-		[JSInvokable("OnThemeChange")]
-		public async Task ThemeChanged(bool isDarkMode, string storedMode) {
+		[JSInvokable(EventNames.ModeChangedEvent)]
+		public async Task ModeChanged(bool isDarkMode, string storedMode) {
 			if (this.OnThemeModeChanged is not null) {
 				await this.OnThemeModeChanged.Invoke(isDarkMode, storedMode);
 			}
 		}
 	}
+
 }
-
-//public sealed class DefaultThemeMonitor(
-//	IThemeState themeState,
-//	IJSAppModule js
-//) : IThemeMonitor {
-
-//	private bool _initialized;
-
-//	public ValueTask InitializeAsync() {
-//		if (this._initialized) {
-//			return ValueTask.CompletedTask; // Prevent reinitialization
-//		}
-//		this._initialized = true;
-
-//		var storedTheme = this.GetStoredTheme();
-//		if (storedTheme.IsEmpty()) {
-//			storedTheme = "auto";
-//		}
-
-//		this.SetTheme(storedTheme);
-//		this.MonitorSystemThemeChanges();
-//		return ValueTask.CompletedTask;
-
-//	}
-
-//	private void MonitorSystemThemeChanges() {
-//		var themeMonitor = new ThemeMonitorRef((isDarkMode, storedTheme) => {
-//			if (storedTheme == "auto") {
-//				js.SetElementAttribute("html", "data-bs-theme", isDarkMode ? "dark" : "light");
-//			}
-//			return Task.CompletedTask;
-//		});
-//		var themeMonitorRef = DotNetObjectReference.Create(themeMonitor);
-//		js.MonitorSystemTheme(themeMonitorRef);
-//	}
-//	private string GetStoredTheme() {
-//		return (js.Invoke<string?>("localStorage.getItem", "theme") ?? "").ToLowerInvariant();
-//	}
-//	private void SetStoredTheme(string theme) {
-//		js.InvokeVoid("localStorage.setItem", "theme", theme.ToLowerInvariant());
-//	}
-
-//	public void SetTheme(string theme) {
-
-//		using var scope = themeState.CreateNotificationScope();
-
-//		var loweredTheme = theme.ToLowerInvariant();
-
-//		this.SetStoredTheme(loweredTheme);
-
-//		var appliedTheme = loweredTheme;
-//		if (loweredTheme == "auto") {
-//			themeState.SetSelectedTheme("auto");
-//			appliedTheme = js.GetSystemTheme();
-//		} else {
-//			themeState.SetSelectedTheme(loweredTheme);
-//		}
-
-//		js.SetElementAttribute("html", "data-bs-theme", appliedTheme);
-
-//		themeState.SetAppliedTheme(appliedTheme);
-
-//	}
-
-//	const string ON_THEME_CHANGED = "OnThemeChange";
-//	private record ThemeMonitorRef {
-
-//		[DynamicDependency(nameof(ThemeChanged))]
-//		public ThemeMonitorRef(Func<bool, string, Task>? OnThemeChanged) {
-//			this.OnThemeChanged = OnThemeChanged;
-//		}
-
-//		public Func<bool, string, Task>? OnThemeChanged { get; }
-
-//		[JSInvokable(ON_THEME_CHANGED)]
-//		public async Task ThemeChanged(bool isDarkMode, string storedTheme) {
-//			if (this.OnThemeChanged is not null) {
-//				await this.OnThemeChanged.Invoke(isDarkMode, storedTheme);
-//			}
-//		}
-//	};
-
-//}

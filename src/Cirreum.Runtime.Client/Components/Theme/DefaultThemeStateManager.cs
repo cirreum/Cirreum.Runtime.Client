@@ -23,20 +23,33 @@ public sealed class DefaultThemeStateManager(
 		themeState.SetAppliedMode(appliedMode);
 	}
 
-	public void SetTheme(ThemeName theme) {
+	public void SetScheme(ColorScheme scheme) {
+		var newSchemeId = scheme.Id;
+		if (themeState.Theme == newSchemeId) {
+			return;
+		}
+
 		using var scope = themeState.CreateNotificationScope();
 
-		var themeString = theme.ToShortName(); // "default", "aspire", etc.
-		this.SetStoredScheme(themeString);
+		this.SetStoredScheme(newSchemeId);
+		js.SetElementAttribute("html", "data-color-scheme", newSchemeId);
 
-		js.SetElementAttribute("html", "data-color-scheme", themeString);
-		themeState.SetTheme(themeString);
+		// Get current and new paths
+		var currentScheme = ColorSchemes.GetOrDefault(themeState.Theme);
+		var currentThemePath = ThemeResourcePaths.GetSchemePath(currentScheme);
+		var newThemePath = ThemeResourcePaths.GetSchemePath(scheme);
+
+		// Update our UI
+		js.ReplaceHeadLink(currentThemePath, newThemePath);
+
+		// Update our state
+		themeState.SetTheme(newSchemeId);
 	}
 
 	private void SetStoredMode(string mode) =>
 		js.InvokeVoid("localStorage.setItem", StorageKeys.ModeKey, mode);
 
-	private void SetStoredScheme(string scheme) =>
-		js.InvokeVoid("localStorage.setItem", StorageKeys.ThemeKey, scheme);
+	private void SetStoredScheme(string schemeId) =>
+		js.InvokeVoid("localStorage.setItem", StorageKeys.SchemeKey, schemeId);
 
 }

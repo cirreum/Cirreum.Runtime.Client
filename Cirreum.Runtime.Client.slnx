@@ -11,9 +11,6 @@
   <Folder Name="/publish/">
     <File Path=".github/workflows/publish.yml" />
   </Folder>
-  <Folder Name="/sample/">
-    <Project Path="samples/Cirreum.Demo.Client/Cirreum.Demo.Client.csproj" Id="32418528-2817-4454-96d1-1c74c0ad25c9" />
-  </Folder>
   <Folder Name="/src/">
     <File Path="src/Directory.Build.props" />
     <Project Path="src/Cirreum.Runtime.Client/Cirreum.Runtime.Client.csproj" />

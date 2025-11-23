@@ -210,8 +210,7 @@ public sealed class DomainApplicationBuilder : IClientDomainApplicationBuilder {
 		//
 		this.Services
 			.AddScoped<IThemeStateManager, DefaultThemeStateManager>()
-			.AddScoped<IThemeIconNameProvider, DefaultThemeIconProvider>()
-			.AddScoped<IThemeIconProvider, DefaultThemeIconProvider>();
+			.AddScoped<IThemeModeIconProvider, DefaultThemeModeIconProvider>();
 
 		// ******************************************************************************
 		// Runtime Services

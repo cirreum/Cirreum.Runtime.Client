@@ -20,6 +20,8 @@
 	<ItemGroup>
 
 		<Using Include="Cirreum.Demo.Client" />
+		<Using Include="Cirreum.Demo.Client.Domain" />
+		<Using Include="Cirreum.Demo.Client.Domain.Users" />
 		<Using Include="Cirreum.Demo.Client.Layout" />
 		<Using Include="Cirreum.Demo.Client.Shared" />
 		<Using Include="Cirreum.Demo.Client.State" />
@@ -33,6 +35,7 @@
 		<Using Include="Cirreum.Components.Presence" />
 		<Using Include="Cirreum.Components.Theme" />
 		<Using Include="Cirreum.Components.Web" />
+		<Using Include="Cirreum.Conductor" />
 		<Using Include="Cirreum.Presence" />
 		<Using Include="Cirreum.RemoteServices" />
 		<Using Include="Cirreum.Runtime" />
@@ -45,10 +48,5 @@
 		<Using Include="Microsoft.AspNetCore.Components.WebAssembly.Hosting" />
 
 	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="wwwroot\css\" />
-	</ItemGroup>
-
 
 </Project>

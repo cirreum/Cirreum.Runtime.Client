@@ -134,7 +134,7 @@ builder.AddClientState(state => state
 //builder.Services.Add...
 
 // Application ViewModels
-//builder.Services.AddScoped<UserSessionViewModel>();
+builder.Services.AddScoped<UserSessionViewModel>();
 //builder.Services.AddScoped<IMermaidService, MermaidService>();
 
 // ******************************************************************************

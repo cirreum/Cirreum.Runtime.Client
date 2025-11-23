@@ -1,7 +1,7 @@
 @namespace Cirreum.Components.Theme
 @inject IThemeState ThemeState
 @inject IThemeStateManager ThemeManager
-@inject IThemeIconNameProvider ThemeIcons
+@inject IThemeModeIconProvider ThemeIcons
 
 <NavListDropdownButton TItemType="string"
 					   IsDropMenu="false"
@@ -11,19 +11,15 @@
 					   ResponsiveAlignment="@Alignment"
 					   AriaLabel="Theme Selector">
 	<TextTemplate>
-		@{
-			var selectedName = ThemeModeNames.All.FirstOrDefault(s => s == ThemeState.Mode)
-			?? ThemeModeNames.Light;
-		}
-		<i class="bi @ThemeIcons.ResolveModeIcon(selectedName)" aria-hidden="true"></i> @Label
+		<i class="bi @ThemeIcons.ResolveModeIcon(ThemeState.Mode)" aria-hidden="true"></i> @Label
 	</TextTemplate>
 	<ChildContent>
-		@foreach (var modeName in Enum.GetNames<ThemeMode>()) {
-			<DropdownItemButton Value="@modeName">
+		@foreach (var mode in Enum.GetValues<ThemeMode>()) {
+			<DropdownItemButton Value="@mode.ToShortName()">
 				<InteractiveTemplate>
 					<div class="d-flex">
-						<i class="bi @ThemeIcons.ResolveModeIcon(modeName)"></i>
-						<span class="ms-2">@modeName</span>
+						<i class="bi @ThemeIcons.ResolveModeIcon(mode)"></i>
+						<span class="ms-2">@mode.ToName()</span>
 						@if (context.IsActive) {
 							<i class="bi bi-check ms-auto"></i>
 						}

@@ -25,13 +25,11 @@ public class StyleSheetSwitcher(
 		this.SubscribeToStateChanges<IThemeState>();
 	}
 
-	protected override Task OnAfterFirstRenderAsync() {
-		this.priorMode = themeState.Mode;
-		return Task.CompletedTask;
-	}
-
 	protected override void OnAfterRender(bool firstRender) {
-		base.OnAfterRender(firstRender);
+
+		if (firstRender) {
+			this.priorMode = themeState.Mode;
+		}
 
 		var currentMode = themeState.Mode;
 
@@ -64,6 +62,8 @@ public class StyleSheetSwitcher(
 			this.priorMode = currentMode;
 			return;
 		}
+
+		base.OnAfterRender(firstRender);
 
 	}
 

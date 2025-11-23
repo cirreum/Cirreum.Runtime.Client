@@ -48,20 +48,9 @@
 @code {
 
 	private RenderFragment NavMenuItems => (__builder) => {
-
-		@NavMenuItem(Routes.Index, Routes.IndexIcon, Routes.IndexName)
-		@NavMenuItem(Routes.Counter, Routes.CounterIcon, Routes.CounterName)
-		@NavMenuItem(Routes.Weather, Routes.WeatherIcon, Routes.WeatherName)
-		@NavMenuItem(Routes.TimeZoneInfo, Routes.TimeZoneIcon, Routes.TimeZoneName)
-		@NavMenuItem(Routes.BrowserInfo, Routes.BrowserInfoIcon, Routes.BrowserInfoName)
-		// @NavMenuItem(Routes.Communications.Index, Routes.Communications.IndexIcon, Routes.Communications.IndexName)
-		// @if (UserState.Profile.IsInAnyRole(ApplicationRoles.AppManagerRole, ApplicationRoles.AppAdminRole)) {
-		// 	@NavMenuItem(Routes.Management.Events, Routes.Management.EventsIcon, Routes.Management.EventsName)
-		// 	@NavMenuItem(Routes.Management.Entries, Routes.Management.EntriesIcon, Routes.Management.EntriesName)
-		// 	@NavMenuItem(Routes.Management.SmsTemplates, Routes.Management.SmsTemplatesIcon, Routes.Management.SmsTemplatesName)
-		// 	@NavMenuItem(Routes.Management.Index, Routes.Management.IndexIcon, Routes.Management.IndexName)
-		// }
-
+		@foreach (var route in Routes.MainNavRoutes) {
+			@NavMenuItem(route.Path, route.Icon, route.Name, route.MatchAll)
+		}
 	};
 
 	private RenderFragment NavMenuItem(string href, string icon, string name, bool matchAll = true) => (__builder) => {

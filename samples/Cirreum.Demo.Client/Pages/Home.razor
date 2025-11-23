@@ -1,8 +1,17 @@
-﻿@layout NavigationLayout
-@page "/"
-
+﻿@page "/"
+@inject IThemeState themeState
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+<div>
+	<span>Mode:</span> @themeState.Mode
+</div>
+<div>
+	<span>AppliedMode:</span> @themeState.AppliedMode
+</div>
+<div>
+	<span>Theme:</span> @themeState.Theme
+</div>

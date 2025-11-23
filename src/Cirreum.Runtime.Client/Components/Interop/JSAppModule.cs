@@ -110,7 +110,7 @@ sealed class JSAppModule : IJSAppModule, IJSAppInterop, IDisposable {
 
 	public void MonitorSystemThemeMode<T>(
 		DotNetObjectReference<T> dotnetObjRef
-	) where T : class, ISystemThemeChangedRef {
+	) where T : class, IThemeModeChangedRef {
 		this.module?.InvokeVoid("monitorSystemThemeMode", dotnetObjRef);
 	}
 

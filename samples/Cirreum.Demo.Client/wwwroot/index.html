@@ -4,10 +4,12 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<meta name="color-scheme" content="dark light">
 	<title>Cirreum.Demo.Client</title>
 	<base href="/" />
 	<link href="css/site.css" rel="stylesheet" type="text/css" />
+	<link href="css/docs.css" rel="stylesheet" type="text/css" />
+	<link href="css/hljs_vs_light.css" rel="stylesheet" type="text/css" />
+	<script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
 	<link rel="preload" id="webassembly" />
 	<script type="importmap"></script>
 </head>
@@ -194,16 +196,14 @@
 
 	<!--asm-name= [client assembly name]-->
 	<!--app-name= [friendly public name]-->
-	<!--app-theme= theme name [default | aspire | excel | office | outlook | windows ]-->
-	<!--app-diag= [null | none | appInsights]-->
+	<!--app-theme= theme name [default | aqua | aspire | excel | office | outlook | windows ]-->
 	<!--font-name= [null | default | valid package name from cdnfonts.com]-->
 	<!--auth-type= [null | none | msal | oidc]-->
 	<!--pwa-script= [null | none | service-worker.js | service-worker.published.js]-->
 	<script src="_content/Cirreum.Runtime.Client/js/cirreum-loader#[.{fingerprint}].js"
 			asm-name="Cirreum.Demo.Client"
 			app-name="Cirreum Demo Client"
-			app-theme="aspire"
-			app-diag="none"
+			app-theme="aqua"
 			font-name="default"
 			auth-type="none"
 			pwa-script="none"
