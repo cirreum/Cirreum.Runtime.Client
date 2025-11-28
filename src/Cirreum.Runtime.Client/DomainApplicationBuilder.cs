@@ -245,9 +245,8 @@ public sealed class DomainApplicationBuilder : IClientDomainApplicationBuilder {
 
 		// ******************************************************************************
 		// App Domain - Conductor/FluentValidation/FluentAuthorization
-		// If ConfigureConductor wasn't called, attempt to auto-bind from appsettings
-		var conductorConfig = _conductorConfiguration ?? (options => options.BindConfiguration(this.Configuration));
-		this.Services.AddDomainServices(conductorConfig);
+		//
+		this.Services.AddDomainServices(this.Configuration, _conductorConfiguration);
 
 
 		// ******************************************************************************
