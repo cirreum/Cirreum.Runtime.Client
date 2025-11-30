@@ -5,6 +5,7 @@ using Cirreum.Runtime.Security;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -231,10 +232,9 @@ public sealed class DomainApplicationBuilder : IClientDomainApplicationBuilder {
 			// Initializers
 			.AddApplicationInitializers(ServiceLifetime.Scoped)
 
-			// Telemetry User Context?
-			//.AddSingleton<ITelemetryUserContext,???>
+			// Default Telemetry User Context
+			.TryAddSingleton<ITelemetryUserContext, NullTelemetryUserContext>();
 
-			;
 
 		// ******************************************************************************
 		// Domain Authorization Related Services

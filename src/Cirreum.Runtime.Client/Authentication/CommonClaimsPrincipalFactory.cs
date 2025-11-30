@@ -82,7 +82,8 @@ public abstract class CommonClaimsPrincipalFactory<TAccount>(
 		Console.WriteLine($"CommonClaimsPrincipalFactory => CreateUserAsync() - ACCOUNT {account} @ {DateTime.Now}");
 #endif
 		var userPrincipal = await base.CreateUserAsync(account, options);
-		logger.LogCreateUser(account.AdditionalProperties["name"]?.ToString() ?? account.AdditionalProperties["email"]?.ToString() ?? "unknown");
+		var userPrincipalName = userPrincipal.Identity?.Name ?? "unknown";
+		logger.LogCreateUser(userPrincipalName);
 
 		// Process Authenticated Principal Identity
 		if (userPrincipal.Identity is ClaimsIdentity identity && identity.IsAuthenticated) {
@@ -157,7 +158,8 @@ public abstract class CommonClaimsPrincipalFactory<TAccount>(
 					await extender.ExtendClaimsAsync(identity, account, this.TokenProvider);
 				} catch (Exception ex) {
 					// Log the error but continue with other extenders
-					logger.LogClaimsExtenderError(ex, extender.GetType().FullName ?? "Unknown");
+					var extenderName = extender.GetType().FullName ?? "Unknown Extender";
+					logger.LogClaimsExtenderError(ex, extenderName);
 				}
 			}
 		}
@@ -168,7 +170,10 @@ public abstract class CommonClaimsPrincipalFactory<TAccount>(
 				try {
 					await processor.ProcessAsync(serviceProvider, userState);
 				} catch (Exception ex) {
-					logger.LogWarning(ex, "Post-processor {ProcessorType} failed", processor.GetType().Name);
+					if (logger.IsEnabled(LogLevel.Warning)) {
+						var processName = processor.GetType().Name;
+						logger.LogWarning(ex, "Post-processor {ProcessorType} failed", processName);
+					}
 				}
 			}
 		}

@@ -10,6 +10,7 @@ internal sealed class ClientUser : UserStateBase {
 
 	internal void SetAuthenticatedPrincipal(ClaimsPrincipal principal) {
 		ArgumentNullException.ThrowIfNull(principal);
+		this._principal = principal;
 
 		if (this._principal.Identity is not ClaimsIdentity claimsIdentity) {
 			throw new InvalidOperationException($"{nameof(principal)} Identity is null or not a ClaimsIdentity.");
