@@ -15,13 +15,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AspNetCore.SassCompiler" Version="1.96.0" />
+		<PackageReference Include="AspNetCore.SassCompiler" Version="1.97.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.1" />
 		<PackageReference Include="Cirreum.Services.Client" Version="1.0.12" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UseLocalComponents)' != 'true'">
-		<PackageReference Include="Cirreum.Components.WebAssembly" Version="1.0.10" />
+		<PackageReference Include="Cirreum.Components.WebAssembly" Version="1.0.11" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(UseLocalComponents)' == 'true'">
 		<ProjectReference Include="..\..\..\..\Core\Cirreum.Components.WebAssembly\src\Cirreum.Components.WebAssembly\Cirreum.Components.WebAssembly.csproj" />
