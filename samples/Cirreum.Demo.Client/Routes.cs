@@ -32,6 +32,8 @@ public static class Routes {
 		new(Detail, "list-task", "Detail Grid"),
 		new(Dialogs, "window-stack", "Dialogs"),
 		new(Tabs, "folder2", "Tabs"),
+		new("/profile-card-test", "person-vcard", "Profile Card"),
+		new("/profile-card-debug", "bug", "Profile Debug"),
 		new(Forms, "check-square", "Forms"),
 		new(ViewModels, "diagram-3", "View Models"),
 		new(UtilComponents, "window-stack", "Misc"),

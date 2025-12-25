@@ -8,11 +8,11 @@
 			</a>
 		</div>
 	}
-	<div class="hstack gap-3 p-3" style="margin:-8px 0;">
+	<div class="user-profile__container">
 		<div class="pic">
 			<div class="profile-pic" aria-hidden="true" role="presentation" style="@ProfilePicStyle"></div>
 		</div>
-		<div class="vstack">
+		<div class="user-profile__content">
 			<span class="name">@Name</span>
 			@if (Company.HasValue()) {
 				<span class="company">
@@ -24,7 +24,7 @@
 			}
 			@if (Status is not null) {
 				<div class="presence">
-					<span style="@PresenceColorStyle">
+					<span class="@PresenceClass">
 						<i class="bi bi-check-circle-fill" aria-hidden="true"></i>
 						@(StatusTitle ?? Status.ToString())
 					</span>
@@ -78,19 +78,22 @@
 
 	private string ProfilePicStyle {
 		get {
-			return
-				$"background-image:url({ProfilePicUrl});";
+			if (string.IsNullOrWhiteSpace(ProfilePicUrl)) {
+				return "";
+			}
+			// Use double quotes to avoid conflicts with single quotes in SVG
+			return $"background-image:url(\"{ProfilePicUrl}\");";
 		}
 	}
 
-	private string PresenceColorStyle => this.Status switch {
-		PresenceStatus.Available => "color: var(--presence-available);",
-		PresenceStatus.Away => "color: var(--presence-away);",
-		PresenceStatus.Busy => "color: var(--presence-busy);",
-		PresenceStatus.DoNotDisturb => "color: var(--presence-dnd);",
-		PresenceStatus.Offline => "color: var(--presence-offline);",
-		PresenceStatus.OutOfOffice => "color: var(--presence-oof);",
-		_ => "color: var(--presence-unknown);"
+	private string PresenceClass => this.Status switch {
+		PresenceStatus.Available => "presence--available",
+		PresenceStatus.Away => "presence--away",
+		PresenceStatus.Busy => "presence--busy",
+		PresenceStatus.DoNotDisturb => "presence--dnd",
+		PresenceStatus.Offline => "presence--offline",
+		PresenceStatus.OutOfOffice => "presence--oof",
+		_ => "presence--unknown"
 	};
 
 }
