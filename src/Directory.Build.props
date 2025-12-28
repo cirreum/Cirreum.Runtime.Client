@@ -3,7 +3,7 @@
 	<!-- Set to true to use local package references -->
 	<!-- BE SURE TO TURN OFF BEFORE CHECKING IN! -->
 	<PropertyGroup>
-		<UseLocalComponents>false</UseLocalComponents>
+		<UseLocalComponents>true</UseLocalComponents>
 	</PropertyGroup>
 	
 	<!-- Detect if running in CI/CD -->

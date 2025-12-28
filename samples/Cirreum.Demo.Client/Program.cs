@@ -136,7 +136,18 @@ builder.AddClientState(state => state
 
 // Application ViewModels
 builder.Services.AddScoped<UserSessionViewModel>();
-//builder.Services.AddScoped<IMermaidService, MermaidService>();
+builder.Services.AddScoped<IMermaidService, MermaidService>();
+
+// Authorization visualization services
+// Use ClientAuthorizationDataService for WASM (real-time analysis in the client)
+// Use ApiAuthorizationDataService when fetching pre-computed results from a server API
+builder.Services.AddScoped<Cirreum.Demo.Client.Services.IAuthorizationDataService, Cirreum.Demo.Client.Services.ClientAuthorizationDataService>();
+
+// To use API-based service instead (for server-rendered analysis results):
+// builder.Services.AddScoped<Cirreum.Demo.Client.Services.IAuthorizationDataService>(sp => {
+//     var httpClient = sp.GetRequiredService<HttpClient>();
+//     return new Cirreum.Demo.Client.Services.ApiAuthorizationDataService(httpClient, "/api/authorization");
+// });
 
 // ******************************************************************************
 // Add AppInsights

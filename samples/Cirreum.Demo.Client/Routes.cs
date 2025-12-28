@@ -23,10 +23,12 @@ public static class Routes {
 	public const string NullData = "null-data";
 	public const string SimpleGrid = "simple-grid";
 	public const string UtilComponents = "utility-components";
+	public const string ClientAuth = "client-authorization";
 
 	// Navigation metadata
 	public static readonly List<NavRoute> MainNavRoutes = [
 		new(Index, "house", "Home"),
+		new(ClientAuth, "shield", "Client Auth"),
 		new(Theme, "card-list", "Theme"),
 		new(SimpleGrid, "star", "Simple Grid"),
 		new(Detail, "list-task", "Detail Grid"),

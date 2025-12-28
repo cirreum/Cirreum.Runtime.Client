@@ -13,6 +13,8 @@
   </Folder>
   <Folder Name="/ref/">
     <Project Path="../../../Core/Cirreum.Components.WebAssembly/src/Cirreum.Components.WebAssembly/Cirreum.Components.WebAssembly.csproj" />
+    <Project Path="../../../Core/Cirreum.Core/src/Cirreum.Core/Cirreum.Core.csproj" />
+    <Project Path="../../../Infrastructure/Cirreum.Services.Client/src/Cirreum.Services.Client/Cirreum.Services.Client.csproj" />
   </Folder>
   <Folder Name="/sample/">
     <Project Path="Cirreum.Demo.Client/Cirreum.Demo.Client.csproj" Id="32418528-2817-4454-96d1-1c74c0ad25c9" />

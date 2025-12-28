@@ -1,0 +1,19 @@
+@page "/client-authorization"
+@inherits PageBase
+
+<AppPageTitle>Authorization Visualization</AppPageTitle>
+
+<h1>Client Authorization Visualization</h1>
+<span class="text-muted">Comprehensive visualization with security analysis</span>
+
+<AuthorizationVisualizationBase ShowExportButtons="true"
+								ShowAnalysisOptions="true"
+								InitialTheme="dark"
+								OnError="HandleError" />
+
+@code {
+	private void HandleError(Exception ex) {
+		Logger.LogError(ex, "Authorization visualization error");
+		Toastr.Show($"Error: {ex.Message}", "Error", "error");
+	}
+}
