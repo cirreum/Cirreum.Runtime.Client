@@ -19,9 +19,13 @@ public class ApiAuthorizationDataService(
 	// Cached data
 	private AnalysisReport? _cachedReport;
 	private DomainCatalog? _cachedResourceCatalog;
-	private IEnumerable<Role>? _cachedRoles;
+	private IReadOnlyList<RoleHierarchyInfo>? _cachedRoleHierarchyInfos;
 	private string? _cachedAuthFlowDiagram;
 	private string? _cachedRoleHierarchyDiagram;
+
+	public AuthorizationDataSource CurrentSource => AuthorizationDataSource.Api;
+
+	public bool IsAvailable => !string.IsNullOrEmpty(this._baseUrl);
 
 	public async Task<AnalysisReport> GetAnalysisReportAsync(int maxRoleDepth) {
 		if (this._cachedReport == null) {
@@ -36,46 +40,63 @@ public class ApiAuthorizationDataService(
 	}
 
 	public async Task<DomainCatalog> GetCatalogAsync() {
-		if (this._cachedResourceCatalog == null) {
-			this._cachedResourceCatalog = await httpClient.GetFromJsonAsync<DomainCatalog>(
-				$"{this._baseUrl}/resource-catalog") ?? new DomainCatalog();
-		}
+		this._cachedResourceCatalog ??= await httpClient.GetFromJsonAsync<DomainCatalog>(
+			$"{this._baseUrl}/resource-catalog") ?? new DomainCatalog();
 		return this._cachedResourceCatalog;
 	}
 
 	public async Task<IEnumerable<Role>> GetRolesAsync() {
-		if (this._cachedRoles == null) {
-			// Roles are serialized as their string representation (namespace:name)
-			var roleStrings = await httpClient.GetFromJsonAsync<List<string>>(
-				$"{this._baseUrl}/roles") ?? [];
-
-			this._cachedRoles = [.. roleStrings.Select(ParseRole)];
-		}
-		return this._cachedRoles;
+		var hierarchyInfos = await this.GetAllRoleHierarchyInfoAsync();
+		return hierarchyInfos.Select(h => h.Role);
 	}
 
-	public async Task<RoleHierarchyInfo> GetRoleHierarchyInfoAsync(Role role) {
-		var response = await httpClient.GetFromJsonAsync<RoleHierarchyInfoDto>(
-			$"{this._baseUrl}/roles/{Uri.EscapeDataString(role.ToString())}/hierarchy");
+	public async Task<IReadOnlyList<RoleHierarchyInfo>> GetAllRoleHierarchyInfoAsync() {
+		if (this._cachedRoleHierarchyInfos == null) {
+			var dtos = await httpClient.GetFromJsonAsync<List<RoleHierarchyInfoDto>>(
+				$"{this._baseUrl}/roles/hierarchy") ?? [];
 
-		if (response == null) {
-			return new RoleHierarchyInfo(role, [], [], 0, 0, 0);
+			this._cachedRoleHierarchyInfos = [.. dtos
+				.Select(dto => new RoleHierarchyInfo(
+					ParseRole(dto.RoleString),
+					[.. dto.ChildRoles.Select(ParseRole)],
+					[.. dto.ParentRoles.Select(ParseRole)],
+					dto.InheritsFromCount,
+					dto.InheritedByCount,
+					dto.HierarchyDepth
+				))
+				.OrderBy(r => r.HierarchyDepth)
+				.ThenBy(r => r.RoleString)];
 		}
+		return this._cachedRoleHierarchyInfos;
+	}
 
-		return new RoleHierarchyInfo(
-			role,
-			[.. response.ChildRoles.Select(ParseRole)],
-			[.. response.ParentRoles.Select(ParseRole)],
-			response.InheritsFromCount,
-			response.InheritedByCount,
-			response.CurrentOrder
-		);
+	public async Task<string> GetAuthorizationFlowDiagramAsync() {
+		this._cachedAuthFlowDiagram ??= await httpClient.GetStringAsync(
+			$"{this._baseUrl}/diagrams/auth-flow");
+		return this._cachedAuthFlowDiagram;
+	}
+
+	public async Task<string> GetRoleHierarchyDiagramAsync() {
+		this._cachedRoleHierarchyDiagram ??= await httpClient.GetStringAsync(
+			$"{this._baseUrl}/diagrams/role-hierarchy");
+		return this._cachedRoleHierarchyDiagram;
+	}
+
+	public async Task RefreshAsync(int maxRoleDepth) {
+		// Clear all caches
+		this._cachedReport = null;
+		this._cachedResourceCatalog = null;
+		this._cachedRoleHierarchyInfos = null;
+		this._cachedAuthFlowDiagram = null;
+		this._cachedRoleHierarchyDiagram = null;
+
+		// Fetch fresh report
+		this._cachedReport = await httpClient.GetFromJsonAsync<AnalysisReport>(
+			$"{this._baseUrl}/report") ?? AnalysisReport.ForCategory("Empty");
 	}
 
 	/// <summary>
 	/// Parses a role string in the format "namespace:name" into a Role object.
-	/// Note: Application roles (app:*) cannot be created via the public constructor,
-	/// so we need to look them up from ApplicationRoles or handle them specially.
 	/// </summary>
 	private static Role ParseRole(string roleString) {
 		var colonIndex = roleString.IndexOf(':');
@@ -87,14 +108,11 @@ public class ApiAuthorizationDataService(
 		var name = roleString[(colonIndex + 1)..];
 
 		// Application roles (app:*) cannot be created via public constructor
-		// They must be looked up from the predefined ApplicationRoles
 		if (ns.Equals(Role.AppNamespace, StringComparison.OrdinalIgnoreCase)) {
-			// Try to find the predefined application role
 			var appRole = FindApplicationRole(name);
 			if (appRole != null) {
 				return appRole;
 			}
-			// If not found, this is an unknown app role - this shouldn't happen in normal usage
 			throw new InvalidOperationException($"Unknown application role: '{roleString}'");
 		}
 
@@ -105,7 +123,6 @@ public class ApiAuthorizationDataService(
 	/// Finds a predefined application role by name.
 	/// </summary>
 	private static Role? FindApplicationRole(string name) {
-		// Check against known application roles from ApplicationRoles static class
 		var normalizedName = name.ToLowerInvariant();
 
 		return normalizedName switch {
@@ -119,39 +136,15 @@ public class ApiAuthorizationDataService(
 		};
 	}
 
-	public async Task<string> GetAuthorizationFlowDiagramAsync() {
-		this._cachedAuthFlowDiagram ??= await httpClient.GetStringAsync(
-				$"{this._baseUrl}/diagrams/auth-flow");
-		return this._cachedAuthFlowDiagram;
-	}
-
-	public async Task<string> GetRoleHierarchyDiagramAsync() {
-		this._cachedRoleHierarchyDiagram ??= await httpClient.GetStringAsync(
-				$"{this._baseUrl}/diagrams/role-hierarchy");
-		return this._cachedRoleHierarchyDiagram;
-	}
-
-	public async Task RefreshAsync(int maxRoleDepth) {
-		// Clear all caches
-		this._cachedReport = null;
-		this._cachedResourceCatalog = null;
-		this._cachedRoles = null;
-		this._cachedAuthFlowDiagram = null;
-		this._cachedRoleHierarchyDiagram = null;
-
-		// Fetch fresh report
-		this._cachedReport = await httpClient.GetFromJsonAsync<AnalysisReport>(
-			$"{this._baseUrl}/report") ?? AnalysisReport.ForCategory("Empty");
-	}
-
 	/// <summary>
 	/// DTO for role hierarchy info from the API
 	/// </summary>
 	private record RoleHierarchyInfoDto {
+		public string RoleString { get; init; } = "";
 		public List<string> ChildRoles { get; init; } = [];
 		public List<string> ParentRoles { get; init; } = [];
 		public int InheritsFromCount { get; init; }
 		public int InheritedByCount { get; init; }
-		public int CurrentOrder { get; init; }
+		public int HierarchyDepth { get; init; }
 	}
 }

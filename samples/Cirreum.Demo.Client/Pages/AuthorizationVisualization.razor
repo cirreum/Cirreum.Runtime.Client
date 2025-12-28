@@ -6,10 +6,10 @@
 <h1>Client Authorization Visualization</h1>
 <span class="text-muted">Comprehensive visualization with security analysis</span>
 
-<AuthorizationVisualizationBase ShowExportButtons="true"
-								ShowAnalysisOptions="true"
-								InitialTheme="dark"
-								OnError="HandleError" />
+<AuthorizationAnalysis ShowExportButtons="true"
+					   ShowAnalysisOptions="true"
+					   InitialTheme="dark"
+					   OnError="HandleError" />
 
 @code {
 	private void HandleError(Exception ex) {

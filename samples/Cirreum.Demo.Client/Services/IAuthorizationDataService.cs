@@ -6,20 +6,28 @@ using Cirreum.Authorization.Modeling.Export;
 
 /// <summary>
 /// Provides authorization data for visualization components.
-/// Can be implemented for client-side analysis or server-side API calls.
+/// Can be implemented for client-side analysis, server-side API calls, or a hybrid approach.
 /// </summary>
 public interface IAuthorizationDataService {
 
 	/// <summary>
+	/// Gets the current data source being used
+	/// </summary>
+	AuthorizationDataSource CurrentSource { get; }
+
+	/// <summary>
+	/// Indicates whether this service is available/configured
+	/// </summary>
+	bool IsAvailable { get; }
+
+	/// <summary>
 	/// Gets the combined analysis report from all analyzers
 	/// </summary>
-	/// <param name="maxRoleDepth">The maximum desired depth of a role hierarchy.</param>
 	Task<AnalysisReport> GetAnalysisReportAsync(int maxRoleDepth);
 
 	/// <summary>
 	/// Gets the analysis summary (derived from analysis report)
 	/// </summary>
-	/// <param name="maxRoleDepth">The maximum desired depth of a role hierarchy.</param>
 	Task<AnalysisSummary> GetAnalysisSummaryAsync(int maxRoleDepth);
 
 	/// <summary>
@@ -33,9 +41,9 @@ public interface IAuthorizationDataService {
 	Task<IEnumerable<Role>> GetRolesAsync();
 
 	/// <summary>
-	/// Gets role hierarchy information for a specific role
+	/// Gets role hierarchy information for all roles (optimized batch operation)
 	/// </summary>
-	Task<RoleHierarchyInfo> GetRoleHierarchyInfoAsync(Role role);
+	Task<IReadOnlyList<RoleHierarchyInfo>> GetAllRoleHierarchyInfoAsync();
 
 	/// <summary>
 	/// Gets the authorization flow diagram definition
@@ -52,4 +60,5 @@ public interface IAuthorizationDataService {
 	/// </summary>
 	/// <param name="maxRoleDepth">The maximum desired depth of a role hierarchy.</param>
 	Task RefreshAsync(int maxRoleDepth);
+
 }

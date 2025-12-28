@@ -1,4 +1,3 @@
-@using System.Collections.Immutable
 @using System.Text
 @using Cirreum.Authorization
 @using Cirreum.Authorization.Analysis
@@ -6,28 +5,35 @@
 @using Cirreum.Authorization.Documentation.Formatters
 @using Cirreum.Authorization.Modeling.Export
 @using Cirreum.Demo.Client.Services
-@inject IAuthorizationDataService AuthorizationDataService
-@inject IAuthorizationRoleRegistry RoleRegistry
+@inject AuthorizationDataServiceFactory DataServiceFactory
 @inject IMermaidService MermaidService
 @inject IWasmFileSystem FileSystem
 @inject IServiceProvider ServiceProvider
 @inject IAuthorizationDocumenter StaticDocumenter
 
 @*
-	Shared Authorization Visualization Base Component
+	Shared Authorization Analysis Component
 	Can be used on any page that needs to display authorization analysis results.
 	Works with both ClientAuthorizationDataService (WASM realtime) and ApiAuthorizationDataService (server API).
 *@
 
 <div class="authorization-visualization">
 	<div class="my-3 mx-2 d-flex justify-content-between align-items-center">
-		<div class="btn-group" role="group">
-			<button class="btn btn-sm btn-outline-primary" @onclick="RefreshAnalysis" disabled="@IsLoading">
-				<i class="fas fa-refresh @(IsLoading ? "fa-spin" : "")"></i> Refresh
-			</button>
-			<button class="btn btn-sm btn-outline-secondary" @onclick="ToggleTheme">
-				<i class="fas fa-palette"></i> @(CurrentTheme == "dark" ? "Light" : "Dark") Theme
-			</button>
+		<div class="d-flex align-items-center gap-2">
+			<div class="btn-group" role="group">
+				<button class="btn btn-sm btn-outline-primary" @onclick="RefreshAnalysis" disabled="@IsLoading">
+					<i class="fas fa-refresh @(IsLoading ? "fa-spin" : "")"></i> Refresh
+				</button>
+				<button class="btn btn-sm btn-outline-secondary" @onclick="ToggleTheme">
+					<i class="fas fa-palette"></i> @(CurrentTheme == "dark" ? "Light" : "Dark") Theme
+				</button>
+			</div>
+			@if (AuthorizationDataService != null) {
+				<span class="badge @(AuthorizationDataService.CurrentSource == AuthorizationDataSource.Client ? "bg-success" : "bg-info")">
+					<i class="fas @(AuthorizationDataService.CurrentSource == AuthorizationDataSource.Client ? "fa-laptop" : "fa-server") me-1"></i>
+					@AuthorizationDataService.CurrentSource
+				</span>
+			}
 		</div>
 
 		@if (ShowExportButtons) {
@@ -91,7 +97,7 @@
 						@if (AnalysisSummary != null) {
 							<AuthorizationSummaryCards Summary="@AnalysisSummary"
 													   TotalRoles="@TotalRoles"
-													   ResourceCatalog="@ResourceCatalog" />
+													   Catalog="@ResourceCatalog" />
 
 							<div class="row mb-4">
 								<div class="col-md-12">
@@ -164,13 +170,12 @@
 
 								<div class="role-list" style="max-height: 600px; overflow-y: auto;">
 									@foreach (var roleInfo in filteredRoles) {
-										var role = roleInfo.Role;
-										var borderClass = role.IsApplicationRole ? "border-start border-primary border-3" : "border-start border-warning border-3";
+										var borderClass = roleInfo.Role.IsApplicationRole ? "border-start border-primary border-3" : "border-start border-warning border-3";
 
 										<div class="list-group-item @borderClass mb-3 px-3 py-2">
 											<div class="d-flex justify-content-between align-items-start mb-2">
-												<h5 class="mb-1 font-monospace">@role.ToString()</h5>
-												@if (role.IsApplicationRole) {
+												<h5 class="mb-1 font-monospace">@roleInfo.RoleString</h5>
+												@if (roleInfo.Role.IsApplicationRole) {
 													<span class="badge bg-primary rounded-pill">
 														<i class="bi bi-shield-lock me-1" />App Role
 													</span>
@@ -182,7 +187,7 @@
 											</div>
 
 											<div class="role-metrics text-muted small mb-2">
-												<span class="me-3">Depth: @roleInfo.CurrentOrder</span>
+												<span class="me-3">Depth: @roleInfo.HierarchyDepth</span>
 												<span class="me-3">Inherits: @roleInfo.InheritsFromCount</span>
 												<span>Inherited by: @roleInfo.InheritedByCount</span>
 											</div>
@@ -322,6 +327,15 @@
 	[Parameter] public string InitialTheme { get; set; } = "dark";
 	[Parameter] public EventCallback<Exception> OnError { get; set; }
 
+	/// <summary>
+	/// The data source to use for authorization data.
+	/// Client = local WASM analysis, Api = server API, Unknown = auto-detect
+	/// </summary>
+	[Parameter] public AuthorizationDataSource DataSource { get; set; } = AuthorizationDataSource.Unknown;
+
+	// Resolved data service based on DataSource parameter
+	protected IAuthorizationDataService? AuthorizationDataService;
+
 	// Analysis state
 	protected AnalysisReport? AnalysisReport;
 	protected AnalysisSummary? AnalysisSummary;
@@ -346,12 +360,11 @@
 	// Visualization data
 	protected string RoleHierarchyDiagram = string.Empty;
 	protected string AuthFlowDiagram = string.Empty;
-	protected IImmutableSet<Role> AllRoles = ImmutableHashSet<Role>.Empty;
 	protected int TotalRoles;
 
-	// Cached role display info
-	protected List<RoleDisplayInfo>? _cachedRoleDisplayInfos;
-	protected List<RoleDisplayInfo>? _cachedFilteredRoles;
+	// Cached role hierarchy info from service
+	protected IReadOnlyList<RoleHierarchyInfo>? _cachedRoleHierarchyInfos;
+	protected List<RoleHierarchyInfo>? _cachedFilteredRoles;
 
 	protected record AnalyzerSummaryInfo(
 		string Category,
@@ -373,6 +386,17 @@
 
 	private async Task InitializeAsync() {
 		try {
+			LoadingMessage = "Resolving data service...";
+			StateHasChanged();
+
+			// Resolve the appropriate data service based on DataSource parameter
+			AuthorizationDataService = DataSource == AuthorizationDataSource.Unknown
+				? DataServiceFactory.GetDefaultService()
+				: DataServiceFactory.GetService(DataSource);
+
+			LoadingMessage = $"Using {AuthorizationDataService.CurrentSource} data source...";
+			StateHasChanged();
+
 			LoadingMessage = "Initializing Mermaid service...";
 			StateHasChanged();
 
@@ -393,6 +417,10 @@
 	/// <param name="refreshDiagrams">Whether to reload diagrams (expensive operation)</param>
 	/// <param name="forceRefresh">Whether to call RefreshAsync on the data service first</param>
 	protected async Task RefreshAllDataAsync(bool refreshDiagrams = false, bool forceRefresh = false) {
+		if (AuthorizationDataService == null) {
+			throw new InvalidOperationException("Authorization data service not initialized. Call InitializeAsync first.");
+		}
+
 		try {
 			if (forceRefresh) {
 				LoadingMessage = "Refreshing authorization data...";
@@ -407,9 +435,9 @@
 				RoleHierarchyDiagram = await AuthorizationDataService.GetRoleHierarchyDiagramAsync();
 				AuthFlowDiagram = await AuthorizationDataService.GetAuthorizationFlowDiagramAsync();
 
-				// Get roles and rebuild cache
-				AllRoles = (await AuthorizationDataService.GetRolesAsync()).ToImmutableHashSet();
-				TotalRoles = AllRoles.Count;
+				// Get role hierarchy info from service and rebuild cache
+				_cachedRoleHierarchyInfos = await AuthorizationDataService.GetAllRoleHierarchyInfoAsync();
+				TotalRoles = _cachedRoleHierarchyInfos.Count;
 				InvalidateRoleCache();
 			}
 
@@ -514,33 +542,11 @@
 	// Helper methods
 
 	protected void InvalidateRoleCache() {
-		_cachedRoleDisplayInfos = null;
 		_cachedFilteredRoles = null;
 		_lastRoleFilter = "";
 	}
 
-	private List<RoleDisplayInfo> GetAllRoleDisplayInfos() {
-		if (_cachedRoleDisplayInfos != null) return _cachedRoleDisplayInfos;
-
-		_cachedRoleDisplayInfos = AllRoles.Select(r => new RoleDisplayInfo {
-			Role = r,
-			RoleString = r.ToString(),
-			ChildRoles = RoleRegistry.GetInheritedRoles(r).ToImmutableHashSet(),
-			ParentRoles = RoleRegistry.GetInheritingRoles(r).ToImmutableHashSet(),
-			InheritsFromCount = RoleRegistry.GetInheritedRoles(r).Count,
-			InheritedByCount = RoleRegistry.GetInheritingRoles(r).Count,
-			CurrentOrder = GetHierarchyDepth(r, RoleRegistry, new HashSet<Role>())
-		})
-		.OrderBy(x => x.CurrentOrder)
-		.ThenBy(x => x.RoleString)
-		.ToList();
-
-		return _cachedRoleDisplayInfos;
-	}
-
-	protected IEnumerable<RoleDisplayInfo> GetFilteredRoles() {
-		var allRoles = GetAllRoleDisplayInfos();
-
+	protected IEnumerable<RoleHierarchyInfo> GetFilteredRoles() {
 		// Return cached filtered results if filter hasn't changed
 		if (_cachedFilteredRoles != null && _lastRoleFilter == RoleFilter) {
 			return _cachedFilteredRoles;
@@ -548,8 +554,10 @@
 
 		_lastRoleFilter = RoleFilter;
 
+		var allRoles = _cachedRoleHierarchyInfos ?? [];
+
 		if (string.IsNullOrWhiteSpace(RoleFilter)) {
-			_cachedFilteredRoles = allRoles;
+			_cachedFilteredRoles = [.. allRoles];
 		} else {
 			_cachedFilteredRoles = allRoles
 				.Where(r => r.RoleString.Contains(RoleFilter, StringComparison.OrdinalIgnoreCase))
@@ -557,28 +565,6 @@
 		}
 
 		return _cachedFilteredRoles;
-	}
-
-	protected class RoleDisplayInfo {
-		public Role Role { get; init; } = default!;
-		public string RoleString { get; init; } = string.Empty;
-		public IReadOnlySet<Role> ChildRoles { get; init; } = new HashSet<Role>();
-		public IReadOnlySet<Role> ParentRoles { get; init; } = new HashSet<Role>();
-		public int InheritsFromCount { get; init; }
-		public int InheritedByCount { get; init; }
-		public int CurrentOrder { get; init; }
-	}
-
-	protected static int GetHierarchyDepth(Role role, IAuthorizationRoleRegistry registry, HashSet<Role> visited) {
-		if (visited.Contains(role))
-			return 0;
-		visited.Add(role);
-
-		var inheritedRoles = registry.GetInheritedRoles(role);
-		if (!inheritedRoles.Any())
-			return 0;
-
-		return inheritedRoles.Max(inherited => GetHierarchyDepth(inherited, registry, new HashSet<Role>(visited))) + 1;
 	}
 
 	protected string GetFormattedReport() {

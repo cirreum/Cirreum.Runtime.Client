@@ -1,7 +1,7 @@
 ﻿namespace Cirreum.Demo.Client.Services;
 
 /// <summary>
-/// Role hierarchy information for display purposes
+/// Contains hierarchy information for a role
 /// </summary>
 public record RoleHierarchyInfo(
 	Role Role,
@@ -9,5 +9,10 @@ public record RoleHierarchyInfo(
 	IReadOnlyList<Role> ParentRoles,
 	int InheritsFromCount,
 	int InheritedByCount,
-	int CurrentOrder
-);
+	int HierarchyDepth
+) {
+	/// <summary>
+	/// The role as a string for display/filtering purposes
+	/// </summary>
+	public string RoleString => this.Role.ToString();
+}
