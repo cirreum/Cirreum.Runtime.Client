@@ -338,6 +338,7 @@
 	// UI state
 	protected string CurrentTheme = "dark";
 	protected string RoleFilter = "";
+	protected string _lastRoleFilter = "";
 	protected string ReportFormat = "markdown";
 	protected bool IsLoading = true;
 	protected string LoadingMessage = "Initializing...";
@@ -347,6 +348,10 @@
 	protected string AuthFlowDiagram = string.Empty;
 	protected IImmutableSet<Role> AllRoles = ImmutableHashSet<Role>.Empty;
 	protected int TotalRoles;
+
+	// Cached role display info
+	protected List<RoleDisplayInfo>? _cachedRoleDisplayInfos;
+	protected List<RoleDisplayInfo>? _cachedFilteredRoles;
 
 	protected record AnalyzerSummaryInfo(
 		string Category,
@@ -362,82 +367,100 @@
 
 	protected override async Task OnAfterRenderAsync(bool firstRender) {
 		if (firstRender) {
-			try {
-				LoadingMessage = "Initializing Mermaid service...";
-				StateHasChanged();
-
-				await MermaidService.InitializeAsync();
-
-				LoadingMessage = "Loading authorization data...";
-				StateHasChanged();
-
-				await LoadAuthorizationDataAsync();
-			} catch (Exception ex) {
-				await OnError.InvokeAsync(ex);
-			} finally {
-				IsLoading = false;
-				StateHasChanged();
-			}
+			await InitializeAsync();
 		}
 	}
 
-	protected async Task LoadAuthorizationDataAsync() {
+	private async Task InitializeAsync() {
 		try {
-			// Generate diagrams using the service
-			RoleHierarchyDiagram = await AuthorizationDataService.GetRoleHierarchyDiagramAsync();
-			AuthFlowDiagram = await AuthorizationDataService.GetAuthorizationFlowDiagramAsync();
+			LoadingMessage = "Initializing Mermaid service...";
+			StateHasChanged();
 
-			// Get roles
-			AllRoles = (await AuthorizationDataService.GetRolesAsync()).ToImmutableHashSet();
-			TotalRoles = AllRoles.Count;
+			await MermaidService.InitializeAsync();
 
-			// Run analysis using the service
-			await RunAnalysisUsingService();
-
+			await RefreshAllDataAsync(refreshDiagrams: true);
 		} catch (Exception ex) {
 			await OnError.InvokeAsync(ex);
+		} finally {
+			IsLoading = false;
+			StateHasChanged();
 		}
 	}
 
-	protected async Task RunAnalysisUsingService() {
+	/// <summary>
+	/// Consolidated refresh method that handles all data loading scenarios.
+	/// </summary>
+	/// <param name="refreshDiagrams">Whether to reload diagrams (expensive operation)</param>
+	/// <param name="forceRefresh">Whether to call RefreshAsync on the data service first</param>
+	protected async Task RefreshAllDataAsync(bool refreshDiagrams = false, bool forceRefresh = false) {
 		try {
+			if (forceRefresh) {
+				LoadingMessage = "Refreshing authorization data...";
+				StateHasChanged();
+				await AuthorizationDataService.RefreshAsync(MaxHierarchyDepth);
+			}
+
+			if (refreshDiagrams) {
+				LoadingMessage = "Loading diagrams...";
+				StateHasChanged();
+
+				RoleHierarchyDiagram = await AuthorizationDataService.GetRoleHierarchyDiagramAsync();
+				AuthFlowDiagram = await AuthorizationDataService.GetAuthorizationFlowDiagramAsync();
+
+				// Get roles and rebuild cache
+				AllRoles = (await AuthorizationDataService.GetRolesAsync()).ToImmutableHashSet();
+				TotalRoles = AllRoles.Count;
+				InvalidateRoleCache();
+			}
+
 			LoadingMessage = "Running security analysis...";
+			StateHasChanged();
 
 			AnalysisReport = await AuthorizationDataService.GetAnalysisReportAsync(MaxHierarchyDepth);
 			AnalysisSummary = await AuthorizationDataService.GetAnalysisSummaryAsync(MaxHierarchyDepth);
 			ResourceCatalog = await AuthorizationDataService.GetCatalogAsync();
 
-			MetricsByCategory = AnalysisReport.Metrics
-				.GroupBy(m => MetricCategories.GetMetricCategoryDisplayName(m.Key))
-				.OrderBy(g => g.Key);
-
-			var issuesByCategory = AnalysisReport.GetIssuesByCategory();
-			AnalyzerSummaries = AnalysisReport.AnalyzerCategories
-				.Select(cat => {
-					var issues = issuesByCategory.GetValueOrDefault(cat, new List<AnalysisIssue>());
-					return new AnalyzerSummaryInfo(
-						cat,
-						issues.Count,
-						issues.Count(i => i.Severity == IssueSeverity.Error),
-						issues.Count(i => i.Severity == IssueSeverity.Warning),
-						issues.Count(i => i.Severity == IssueSeverity.Info)
-					);
-				})
-				.ToList();
+			ProcessAnalysisResults();
 
 		} catch (Exception ex) {
 			await OnError.InvokeAsync(ex);
 		}
 	}
 
+	private void ProcessAnalysisResults() {
+		if (AnalysisReport == null) return;
+
+		// Filter issues based on IncludeInfoIssues setting
+		var filteredIssues = IncludeInfoIssues
+			? AnalysisReport.Issues
+			: AnalysisReport.Issues.Where(i => i.Severity != IssueSeverity.Info).ToList();
+
+		MetricsByCategory = AnalysisReport.Metrics
+			.GroupBy(m => MetricCategories.GetMetricCategoryDisplayName(m.Key))
+			.OrderBy(g => g.Key);
+
+		var issuesByCategory = filteredIssues
+			.GroupBy(i => i.Category)
+			.ToDictionary(g => g.Key, g => g.ToList());
+
+		AnalyzerSummaries = AnalysisReport.AnalyzerCategories
+			.Select(cat => {
+				var issues = issuesByCategory.GetValueOrDefault(cat, []);
+				return new AnalyzerSummaryInfo(
+					cat,
+					issues.Count,
+					issues.Count(i => i.Severity == IssueSeverity.Error),
+					issues.Count(i => i.Severity == IssueSeverity.Warning),
+					issues.Count(i => i.Severity == IssueSeverity.Info)
+				);
+			})
+			.ToList();
+	}
+
 	protected async Task RefreshAnalysis() {
 		IsLoading = true;
-		LoadingMessage = "Refreshing analysis...";
-		StateHasChanged();
-
 		try {
-			await AuthorizationDataService.RefreshAsync(MaxHierarchyDepth);
-			await LoadAuthorizationDataAsync();
+			await RefreshAllDataAsync(refreshDiagrams: true, forceRefresh: true);
 		} finally {
 			IsLoading = false;
 			StateHasChanged();
@@ -446,19 +469,12 @@
 
 	protected void ToggleTheme() {
 		CurrentTheme = CurrentTheme == "dark" ? "default" : "dark";
-		StateHasChanged();
 	}
 
 	protected async Task ApplyOptionsAndReanalyze() {
 		IsLoading = true;
-		LoadingMessage = "Applying options and re-analyzing...";
-		StateHasChanged();
-
 		try {
-			await AuthorizationDataService.RefreshAsync(MaxHierarchyDepth);
-			await RunAnalysisUsingService();
-		} catch (Exception ex) {
-			await OnError.InvokeAsync(ex);
+			await RefreshAllDataAsync(refreshDiagrams: false, forceRefresh: true);
 		} finally {
 			IsLoading = false;
 			StateHasChanged();
@@ -497,8 +513,16 @@
 
 	// Helper methods
 
-	protected IEnumerable<RoleDisplayInfo> GetFilteredRoles() {
-		var roles = AllRoles.Select(r => new RoleDisplayInfo {
+	protected void InvalidateRoleCache() {
+		_cachedRoleDisplayInfos = null;
+		_cachedFilteredRoles = null;
+		_lastRoleFilter = "";
+	}
+
+	private List<RoleDisplayInfo> GetAllRoleDisplayInfos() {
+		if (_cachedRoleDisplayInfos != null) return _cachedRoleDisplayInfos;
+
+		_cachedRoleDisplayInfos = AllRoles.Select(r => new RoleDisplayInfo {
 			Role = r,
 			RoleString = r.ToString(),
 			ChildRoles = RoleRegistry.GetInheritedRoles(r).ToImmutableHashSet(),
@@ -506,13 +530,33 @@
 			InheritsFromCount = RoleRegistry.GetInheritedRoles(r).Count,
 			InheritedByCount = RoleRegistry.GetInheritingRoles(r).Count,
 			CurrentOrder = GetHierarchyDepth(r, RoleRegistry, new HashSet<Role>())
-		});
+		})
+		.OrderBy(x => x.CurrentOrder)
+		.ThenBy(x => x.RoleString)
+		.ToList();
 
-		if (!string.IsNullOrWhiteSpace(RoleFilter)) {
-			roles = roles.Where(r => r.RoleString.Contains(RoleFilter, StringComparison.OrdinalIgnoreCase));
+		return _cachedRoleDisplayInfos;
+	}
+
+	protected IEnumerable<RoleDisplayInfo> GetFilteredRoles() {
+		var allRoles = GetAllRoleDisplayInfos();
+
+		// Return cached filtered results if filter hasn't changed
+		if (_cachedFilteredRoles != null && _lastRoleFilter == RoleFilter) {
+			return _cachedFilteredRoles;
 		}
 
-		return roles.OrderBy(x => x.CurrentOrder).ThenBy(x => x.RoleString);
+		_lastRoleFilter = RoleFilter;
+
+		if (string.IsNullOrWhiteSpace(RoleFilter)) {
+			_cachedFilteredRoles = allRoles;
+		} else {
+			_cachedFilteredRoles = allRoles
+				.Where(r => r.RoleString.Contains(RoleFilter, StringComparison.OrdinalIgnoreCase))
+				.ToList();
+		}
+
+		return _cachedFilteredRoles;
 	}
 
 	protected class RoleDisplayInfo {
