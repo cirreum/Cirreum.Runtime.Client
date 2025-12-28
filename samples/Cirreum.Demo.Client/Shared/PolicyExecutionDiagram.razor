@@ -1,8 +1,9 @@
 ﻿@inject IDomainEnvironment DomainEnvironment
-@using Cirreum.Authorization.Analysis
-@using Cirreum.Authorization.Visualization
-@using Microsoft.Extensions.DependencyInjection
 @using System.Text
+@using Cirreum.Authorization.Analysis
+@using Cirreum.Authorization.Modeling
+@using Cirreum.Authorization.Modeling.Types
+@using Microsoft.Extensions.DependencyInjection
 
 <div class="policy-execution-section">
 	<div class="d-flex justify-content-between align-items-center mb-3">
@@ -151,10 +152,10 @@
 	private async Task LoadPolicyData() {
 		try {
 			// Initialize the provider if needed
-			AuthorizationRuleProvider.Instance.Initialize(Services);
+			AuthorizationModel.Instance.Initialize(Services);
 
 			// Get policy rules
-			var rules = AuthorizationRuleProvider.Instance.GetAllPolicyRules();
+			var rules = AuthorizationModel.Instance.GetPolicyRules();
 			PolicyRules = rules.ToList();
 		} catch (Exception ex) {
 			errorMessage = $"Failed to load policy data: {ex.Message}";

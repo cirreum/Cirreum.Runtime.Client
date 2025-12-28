@@ -2,7 +2,7 @@ namespace Cirreum.Demo.Client.Services;
 
 using Cirreum.Authorization;
 using Cirreum.Authorization.Analysis;
-using Cirreum.Authorization.Visualization;
+using Cirreum.Authorization.Modeling.Export;
 
 /// <summary>
 /// Provides authorization data for visualization components.
@@ -13,12 +13,14 @@ public interface IAuthorizationDataService {
 	/// <summary>
 	/// Gets the combined analysis report from all analyzers
 	/// </summary>
-	Task<AnalysisReport> GetAnalysisReportAsync();
+	/// <param name="maxRoleDepth">The maximum desired depth of a role hierarchy.</param>
+	Task<AnalysisReport> GetAnalysisReportAsync(int maxRoleDepth);
 
 	/// <summary>
 	/// Gets the analysis summary (derived from analysis report)
 	/// </summary>
-	Task<AnalysisSummary> GetAnalysisSummaryAsync();
+	/// <param name="maxRoleDepth">The maximum desired depth of a role hierarchy.</param>
+	Task<AnalysisSummary> GetAnalysisSummaryAsync(int maxRoleDepth);
 
 	/// <summary>
 	/// Gets the domain catalog hierarchy (Domain Boundary -> Resource Kind -> Resource)
@@ -48,5 +50,6 @@ public interface IAuthorizationDataService {
 	/// <summary>
 	/// Refreshes/reloads the authorization data
 	/// </summary>
-	Task RefreshAsync();
+	/// <param name="maxRoleDepth">The maximum desired depth of a role hierarchy.</param>
+	Task RefreshAsync(int maxRoleDepth);
 }

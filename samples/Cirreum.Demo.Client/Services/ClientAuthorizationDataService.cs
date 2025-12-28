@@ -2,7 +2,9 @@ namespace Cirreum.Demo.Client.Services;
 
 using Cirreum.Authorization;
 using Cirreum.Authorization.Analysis;
-using Cirreum.Authorization.Visualization;
+using Cirreum.Authorization.Documentation.Formatters;
+using Cirreum.Authorization.Modeling;
+using Cirreum.Authorization.Modeling.Export;
 
 /// <summary>
 /// Client-side implementation that performs live analysis using AuthorizationRuleProvider.
@@ -15,20 +17,20 @@ public class ClientAuthorizationDataService(
 
 	private AnalysisReport? _cachedAnalysisReport;
 
-	public async Task<AnalysisReport> GetAnalysisReportAsync() {
+	public async Task<AnalysisReport> GetAnalysisReportAsync(int maxRoleDepth) {
 		if (this._cachedAnalysisReport == null) {
-			await this.RefreshAsync();
+			await this.RefreshAsync(maxRoleDepth);
 		}
 		return this._cachedAnalysisReport!;
 	}
 
-	public async Task<AnalysisSummary> GetAnalysisSummaryAsync() {
-		var report = await this.GetAnalysisReportAsync();
+	public async Task<AnalysisSummary> GetAnalysisSummaryAsync(int maxRoleDepth) {
+		var report = await this.GetAnalysisReportAsync(maxRoleDepth);
 		return report.GetSummary();
 	}
 
 	public Task<DomainCatalog> GetCatalogAsync() {
-		return Task.FromResult(AuthorizationRuleProvider.Instance.GetCatalog());
+		return Task.FromResult(AuthorizationModel.Instance.GetCatalog());
 	}
 
 	public Task<IEnumerable<Role>> GetRolesAsync() {
@@ -77,12 +79,10 @@ public class ClientAuthorizationDataService(
 		return Task.FromResult(RoleHierarchyRenderer.ToMermaidDiagram(roleRegistry));
 	}
 
-	public async Task RefreshAsync() {
-		// Initialize provider with services if not already done
-		AuthorizationRuleProvider.Instance.Initialize(serviceProvider);
+	public async Task RefreshAsync(int maxRoleDepth) {
 
-		// Clear provider cache to get fresh data
-		AuthorizationRuleProvider.Instance.ClearCache();
+		// Initialize provider with services and clears the internal cache
+		AuthorizationModel.Instance.Initialize(serviceProvider);
 
 		// Run analysis using the composite analyzer
 		var analysisOptions = new AnalysisOptions {

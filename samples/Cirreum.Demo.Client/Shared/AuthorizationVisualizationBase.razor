@@ -1,14 +1,17 @@
+@using System.Collections.Immutable
+@using System.Text
 @using Cirreum.Authorization
 @using Cirreum.Authorization.Analysis
-@using Cirreum.Authorization.Visualization
+@using Cirreum.Authorization.Documentation
+@using Cirreum.Authorization.Documentation.Formatters
+@using Cirreum.Authorization.Modeling.Export
 @using Cirreum.Demo.Client.Services
-@using System.Text
-@using System.Collections.Immutable
 @inject IAuthorizationDataService AuthorizationDataService
 @inject IAuthorizationRoleRegistry RoleRegistry
 @inject IMermaidService MermaidService
 @inject IWasmFileSystem FileSystem
 @inject IServiceProvider ServiceProvider
+@inject IAuthorizationDocumenter StaticDocumenter
 
 @*
 	Shared Authorization Visualization Base Component
@@ -137,8 +140,8 @@
 					</div>
 				</Tab>
 
-				<Tab Name="Domain Architecture">
-					<DomainArchitectureView ResourceCatalog="@ResourceCatalog" />
+				<Tab Name="Domain">
+					<DomainModelView ResourceCatalog="@ResourceCatalog" />
 				</Tab>
 
 				<Tab Name="Roles">
@@ -400,8 +403,8 @@
 		try {
 			LoadingMessage = "Running security analysis...";
 
-			AnalysisReport = await AuthorizationDataService.GetAnalysisReportAsync();
-			AnalysisSummary = await AuthorizationDataService.GetAnalysisSummaryAsync();
+			AnalysisReport = await AuthorizationDataService.GetAnalysisReportAsync(MaxHierarchyDepth);
+			AnalysisSummary = await AuthorizationDataService.GetAnalysisSummaryAsync(MaxHierarchyDepth);
 			ResourceCatalog = await AuthorizationDataService.GetCatalogAsync();
 
 			MetricsByCategory = AnalysisReport.Metrics
@@ -433,7 +436,7 @@
 		StateHasChanged();
 
 		try {
-			await AuthorizationDataService.RefreshAsync();
+			await AuthorizationDataService.RefreshAsync(MaxHierarchyDepth);
 			await LoadAuthorizationDataAsync();
 		} finally {
 			IsLoading = false;
@@ -452,7 +455,7 @@
 		StateHasChanged();
 
 		try {
-			await AuthorizationDataService.RefreshAsync();
+			await AuthorizationDataService.RefreshAsync(MaxHierarchyDepth);
 			await RunAnalysisUsingService();
 		} catch (Exception ex) {
 			await OnError.InvokeAsync(ex);
@@ -466,24 +469,21 @@
 	protected async Task ExportMarkdown() {
 		if (AnalysisReport == null) return;
 
-		var documenter = new AuthorizationDocumenter(RoleRegistry, ServiceProvider);
-		var markdown = await documenter.GenerateMarkdown();
+		var markdown = await StaticDocumenter.GenerateMarkdown();
 		await DownloadFile("authorization-documentation.md", markdown, "text/markdown");
 	}
 
 	protected async Task ExportHtml() {
 		if (AnalysisReport == null) return;
 
-		var documenter = new AuthorizationDocumenter(RoleRegistry, ServiceProvider);
-		var html = await documenter.RenderHtmlPage();
+		var html = await StaticDocumenter.RenderHtmlPage();
 		await DownloadFile("authorization-documentation.html", html, "text/html");
 	}
 
 	protected async Task ExportCsv() {
 		if (AnalysisReport == null) return;
 
-		var documenter = new AuthorizationDocumenter(RoleRegistry, ServiceProvider);
-		var csv = await documenter.GenerateCsv();
+		var csv = await StaticDocumenter.GenerateCsv();
 		await DownloadFile("authorization-documentation.csv", csv, "text/csv");
 	}
 

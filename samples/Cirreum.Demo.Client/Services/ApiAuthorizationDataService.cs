@@ -2,7 +2,7 @@ namespace Cirreum.Demo.Client.Services;
 
 using Cirreum.Authorization;
 using Cirreum.Authorization.Analysis;
-using Cirreum.Authorization.Visualization;
+using Cirreum.Authorization.Modeling.Export;
 using System.Net.Http.Json;
 
 /// <summary>
@@ -23,15 +23,15 @@ public class ApiAuthorizationDataService(
 	private string? _cachedAuthFlowDiagram;
 	private string? _cachedRoleHierarchyDiagram;
 
-	public async Task<AnalysisReport> GetAnalysisReportAsync() {
+	public async Task<AnalysisReport> GetAnalysisReportAsync(int maxRoleDepth) {
 		if (this._cachedReport == null) {
-			await this.RefreshAsync();
+			await this.RefreshAsync(maxRoleDepth);
 		}
 		return this._cachedReport!;
 	}
 
-	public async Task<AnalysisSummary> GetAnalysisSummaryAsync() {
-		var report = await this.GetAnalysisReportAsync();
+	public async Task<AnalysisSummary> GetAnalysisSummaryAsync(int maxRoleDepth) {
+		var report = await this.GetAnalysisReportAsync(maxRoleDepth);
 		return report.GetSummary();
 	}
 
@@ -131,7 +131,7 @@ public class ApiAuthorizationDataService(
 		return this._cachedRoleHierarchyDiagram;
 	}
 
-	public async Task RefreshAsync() {
+	public async Task RefreshAsync(int maxRoleDepth) {
 		// Clear all caches
 		this._cachedReport = null;
 		this._cachedResourceCatalog = null;
