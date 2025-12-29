@@ -334,10 +334,6 @@ function initializeApp() {
 	// Lastest: v1.13.1
 	// https://unpkg.com/bootstrap-icons@1.13.1/?meta
 	loadLocalCss("_content/Cirreum.Components.WebAssembly/css/bootstrap-icons.min.css");
-	//window.loadCss(
-	//	"https://unpkg.com/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css",
-	//	"sha256-pdY4ejLKO67E0CM2tbPtq1DJ3VGDVVdqAR6j3ZwdiE4="
-	//);
 
 
 	//
@@ -378,17 +374,11 @@ function initializeApp() {
 	// Latest: v2.11.8
 	// https://app.unpkg.com/@popperjs/core@2.11.8
 	loadLocalJs("_content/Cirreum.Components.WebAssembly/js/popper.min.js");
-	//window.loadJs(
-	//	"https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js",
-	//	"sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r");
 
 	// draggabilly.js
 	// Latest: v3.0.0
 	// https://app.unpkg.com/draggabilly@3.0.0
 	loadLocalJs("_content/Cirreum.Components.WebAssembly/js/draggabilly.pkgd.min.js");
-	//window.loadJs(
-	//	"https://unpkg.com/draggabilly@3.0.0/dist/draggabilly.pkgd.min.js",
-	//	"sha384-sIOFgJAHSREC1OX+fyKmFycNmzLEWIUXGBkMwi4PII+pOIqCje0nWs3/9Ot2lbzw");
 
 	//
 	// App Styles
