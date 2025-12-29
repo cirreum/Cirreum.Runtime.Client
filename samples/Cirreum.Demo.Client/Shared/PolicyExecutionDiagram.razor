@@ -37,8 +37,7 @@
 		</div>
 
 		<!-- Mermaid Diagram -->
-		<MermaidDiagram DiagramDefinition="@diagramDefinition"
-						Theme="@Theme" />
+		<MermaidDiagram DiagramDefinition="@diagramDefinition" />
 
 		@if (!string.IsNullOrEmpty(errorMessage)) {
 			<div class="alert alert-warning mt-3">
@@ -123,7 +122,6 @@
 
 @code {
 
-	[Parameter] public string Theme { get; set; } = "dark";
 	[Parameter] public bool ShowOnlyCurrentRuntime { get; set; } = true;
 	[Parameter] public int MaxPoliciesInDiagram { get; set; } = 10;
 	[Parameter] public EventCallback<string> OnError { get; set; }

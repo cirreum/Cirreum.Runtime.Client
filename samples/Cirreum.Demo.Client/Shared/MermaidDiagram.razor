@@ -1,4 +1,5 @@
-﻿@inject IMermaidService MermaidService
+@inject IMermaidService MermaidService
+@implements IDisposable
 
 <div @ref="containerRef" class="mermaid-container @CssClass" style="@Style">
 	@if (IsLoading) {
@@ -62,7 +63,13 @@
 
 @code {
 	[Parameter] public string DiagramDefinition { get; set; } = string.Empty;
+
+	/// <summary>
+	/// Theme for the diagram. Use null or "auto" to automatically detect from Bootstrap theme.
+	/// Explicit values: "default", "dark", "forest", "neutral", etc.
+	/// </summary>
 	[Parameter] public string? Theme { get; set; }
+
 	[Parameter] public string CssClass { get; set; } = string.Empty;
 	[Parameter] public string Style { get; set; } = string.Empty;
 	[Parameter] public EventCallback<string> OnRendered { get; set; }
@@ -75,12 +82,36 @@
 	private string ErrorMessage = string.Empty;
 	private string _lastRenderedDefinition = string.Empty;
 	private string? _lastRenderedTheme;
+	private bool _isSubscribed = false;
+	private bool _isDisposed = false;
+
+	protected override void OnInitialized() {
+		// Subscribe to theme changes if using auto theme
+		if (Theme == null || Theme == "auto") {
+			MermaidService.ThemeChanged += OnThemeChanged;
+			_isSubscribed = true;
+		}
+	}
 
 	protected override async Task OnParametersSetAsync() {
 		// Only re-render if the definition or theme actually changed
 		if (DiagramDefinition != _lastRenderedDefinition || Theme != _lastRenderedTheme) {
 			await RenderDiagramAsync();
 		}
+	}
+
+	private void OnThemeChanged(string newTheme) {
+		if (_isDisposed) return;
+
+		// Re-render with the new theme
+		InvokeAsync(async () => {
+			if (!_isDisposed && !string.IsNullOrEmpty(DiagramDefinition)) {
+				// Force re-render by clearing last rendered theme
+				_lastRenderedTheme = null;
+				await RenderDiagramAsync();
+				StateHasChanged();
+			}
+		});
 	}
 
 	private async Task RenderDiagramAsync() {
@@ -94,7 +125,9 @@
 		StateHasChanged();
 
 		try {
-			var svg = await MermaidService.RenderDiagramAsync(DiagramDefinition, Theme);
+			// Pass null/auto to let JS auto-detect Bootstrap theme
+			var themeToUse = Theme == "auto" ? null : Theme;
+			var svg = await MermaidService.RenderDiagramAsync(DiagramDefinition, themeToUse);
 			RenderedSvg = svg;
 			_lastRenderedDefinition = DiagramDefinition;
 			_lastRenderedTheme = Theme;
@@ -113,6 +146,13 @@
 		} finally {
 			IsLoading = false;
 			StateHasChanged();
+		}
+	}
+
+	public void Dispose() {
+		_isDisposed = true;
+		if (_isSubscribed) {
+			MermaidService.ThemeChanged -= OnThemeChanged;
 		}
 	}
 
