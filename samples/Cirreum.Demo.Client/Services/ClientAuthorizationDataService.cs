@@ -48,7 +48,7 @@ public class ClientAuthorizationDataService(
 	}
 
 	public Task<string> GetAuthorizationFlowDiagramAsync() {
-		return Task.FromResult(AuthorizationFlowDiagram);
+		return Task.FromResult(AuthorizationFlowRenderer.ToMermaidDiagram());
 	}
 
 	public Task<string> GetRoleHierarchyDiagramAsync() {
@@ -113,27 +113,4 @@ public class ClientAuthorizationDataService(
 		return inheritedRoles.Max(inherited => this.CalculateHierarchyDepth(inherited, [.. visited])) + 1;
 	}
 
-	/// <summary>
-	/// Static authorization flow diagram showing the request authorization pipeline
-	/// </summary>
-	private const string AuthorizationFlowDiagram = """
-		flowchart TD
-			A[Request] --> B{Authenticated?}
-			B -->|No| C[UnauthenticatedAccessException]
-			B -->|Yes| D[Get User Roles]
-			D --> E[Resolve Effective Roles<br/>via Inheritance]
-			E --> F[Create Authorization Context]
-			F --> G{Resource Validators?}
-			G -->|Yes| H[Run Resource Validators]
-			G -->|No| I{Policy Validators?}
-			H --> I
-			I -->|Yes| J[Run Policy Validators<br/>in Order]
-			I -->|No| K{Any Protection?}
-			J --> L{All Pass?}
-			K -->|No| M[⚠️ Unprotected Resource]
-			K -->|Yes| L
-			L -->|No| N[ForbiddenAccessException]
-			L -->|Yes| O[✅ Access Granted]
-			M --> O
-		""";
 }
