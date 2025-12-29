@@ -10,8 +10,6 @@
 // ******************************************************************************
 // Configure the WebAssemblyApplication
 //
-using Cirreum.Demo.Client.Services;
-
 var builder = DomainApplication
 	.CreateBuilder(args);
 
@@ -140,17 +138,6 @@ builder.AddClientState(state => state
 builder.Services.AddScoped<UserSessionViewModel>();
 builder.Services.AddScoped<IMermaidService, MermaidService>();
 
-// Authorization visualization services
-builder.Services.AddScoped<ClientAuthorizationDataService>();
-builder.Services.AddScoped(sp =>
-	new ApiAuthorizationDataService(sp.GetRequiredService<HttpClient>(), "/api/authorization"));
-builder.Services.AddScoped<AuthorizationDataServiceFactory>();
-
-// To use API-based service instead (for server-rendered analysis results):
-// builder.Services.AddScoped<Cirreum.Demo.Client.Services.IAuthorizationDataService>(sp => {
-//     var httpClient = sp.GetRequiredService<HttpClient>();
-//     return new Cirreum.Demo.Client.Services.ApiAuthorizationDataService(httpClient, "/api/authorization");
-// });
 
 // ******************************************************************************
 // Add AppInsights
