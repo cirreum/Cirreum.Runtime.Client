@@ -21,7 +21,7 @@
 
 	<ItemGroup Condition="'$(UseLocalComponents)' != 'true'">
 		<PackageReference Include="Cirreum.Components.WebAssembly" Version="1.0.15" />
-		<PackageReference Include="Cirreum.Services.Client" Version="1.0.20" />
+		<PackageReference Include="Cirreum.Services.Client" Version="1.0.21" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(UseLocalComponents)' == 'true'">
 		<ProjectReference Include="..\..\..\..\Infrastructure\Cirreum.Services.Client\src\Cirreum.Services.Client\Cirreum.Services.Client.csproj" />
