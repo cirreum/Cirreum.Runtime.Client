@@ -52,14 +52,6 @@
 					<label class="form-label">Max Hierarchy Depth</label>
 					<input type="number" class="form-control form-control-sm" @bind="MaxHierarchyDepth" min="1" max="20" />
 				</div>
-				<div class="col-md-3">
-					<div class="form-check">
-						<input class="form-check-input" type="checkbox" @bind="IncludeInfoIssues" id="includeInfo">
-						<label class="form-check-label" for="includeInfo">
-							Include Info Issues
-						</label>
-					</div>
-				</div>
 				<div class="col-md-2">
 					<button class="btn btn-sm btn-primary w-100" @onclick="RefreshSnapshot" disabled="@IsLoading">
 						<i class="fas fa-play"></i> Apply & Run
@@ -308,7 +300,6 @@
 
 	// Analysis options
 	protected int MaxHierarchyDepth = 10;
-	protected bool IncludeInfoIssues = true;
 
 	// Grouped data (derived from snapshot)
 	protected IEnumerable<IGrouping<string, KeyValuePair<string, int>>>? MetricsByCategory;
@@ -369,11 +360,10 @@
 
 				var options = new AnalysisOptions {
 					MaxHierarchyDepth = MaxHierarchyDepth,
-					IncludeInfoIssues = IncludeInfoIssues,
 					ExcludedCategories = []
 				};
 
-				Snapshot = await AuthorizationSnapshot.CaptureAsync(
+				Snapshot = AuthorizationSnapshot.Capture(
 					RoleRegistry,
 					ServiceProvider,
 					options);
@@ -390,16 +380,11 @@
 	private void ProcessSnapshot() {
 		if (Snapshot == null) return;
 
-		// Filter issues based on IncludeInfoIssues setting
-		var filteredIssues = IncludeInfoIssues
-			? Snapshot.AnalysisReport.Issues
-			: Snapshot.AnalysisReport.Issues.Where(i => i.Severity != IssueSeverity.Info).ToList();
-
 		MetricsByCategory = Snapshot.AnalysisReport.Metrics
 			.GroupBy(m => MetricCategories.GetMetricCategoryDisplayName(m.Key))
 			.OrderBy(g => g.Key);
 
-		var issuesByCategory = filteredIssues
+		var issuesByCategory = Snapshot.AnalysisReport.Issues
 			.GroupBy(i => i.Category)
 			.ToDictionary(g => g.Key, g => g.ToList());
 
@@ -436,21 +421,21 @@
 	protected async Task ExportMarkdown() {
 		if (Snapshot == null) return;
 
-		var markdown = await StaticDocumenter.GenerateMarkdown();
+		var markdown = StaticDocumenter.GenerateMarkdown();
 		await DownloadFile("authorization-documentation.md", markdown, "text/markdown");
 	}
 
 	protected async Task ExportHtml() {
 		if (Snapshot == null) return;
 
-		var html = await StaticDocumenter.RenderHtmlPage();
+		var html = StaticDocumenter.RenderHtmlPage();
 		await DownloadFile("authorization-documentation.html", html, "text/html");
 	}
 
 	protected async Task ExportCsv() {
 		if (Snapshot == null) return;
 
-		var csv = await StaticDocumenter.GenerateCsv();
+		var csv = StaticDocumenter.GenerateCsv();
 		await DownloadFile("authorization-documentation.csv", csv, "text/csv");
 	}
 
