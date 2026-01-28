@@ -1,3 +1,9 @@
+> [!WARNING]
+> **This repository has been archived and is no longer maintained.**
+>
+> This package has been renamed and moved to [Cirreum.Runtime.Wasm](https://github.com/cirreum/Cirreum.Runtime.Wasm).
+> Please use the new package for all future development.
+
 # Cirreum.Runtime.Client
 
 [![NuGet Version](https://img.shields.io/nuget/v/Cirreum.Runtime.Client.svg?style=flat-square&labelColor=1F1F1F&color=003D8F)](https://www.nuget.org/packages/Cirreum.Runtime.Client/)
